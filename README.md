@@ -23,19 +23,32 @@ Give it a URL, README, or description of a tool. It will:
 2. Investigate your actual project: it looks for `CLAUDE.md`, `AGENTS.md`, `.cursorrules`,
    `CONTRIBUTING.md`, or infers conventions directly from your code and dependencies if none of
    those exist. It never assumes a specific project structure.
-3. Deliver **exactly one verdict**, always backed by a specific fact from your project:
+3. Classify the **cost** as *shape* or *infrastructure*, because the two have different answers:
+
+   - **Shape cost** — foreign language, awkward API, its own config format. This is interface
+     cost, and an adapter genuinely removes it: your project talks to one narrow contract and
+     never sees the foreign shape.
+   - **Infrastructure cost** — a service to keep running, a database to provision, an API key
+     that bills per call. An adapter hides this from the caller but not from the operator, so it
+     stays a legitimate reason to reject.
+
+   A foreign runtime *on its own* is never sufficient grounds for REJECT. Without this step the
+   agent reliably rejects useful tools for being written in the wrong language — the single most
+   common failure mode in practice.
+4. Deliver **exactly one verdict**, always backed by a specific fact from your project:
 
    | Verdict | Meaning |
    |---|---|
    | **REJECT** | Not worth it. States the specific overlap or conflict with what you already have. |
    | **REJECT, BUT LEARN FROM IT** | Skip the tool, but one idea in it is worth borrowing — named precisely, with where to apply it in your existing setup. |
+   | **ADOPT BEHIND AN ADAPTER** | Worth having, but the cost is shape. Brings it in as a separate module behind one narrow contract, and names what the adapter does *not* solve. |
    | **REPLACE** | This should replace something you already have. Says what to remove, not just what to add. |
    | **ADOPT** | Genuinely worth adding. Proposes the smallest-footprint way to bring it in, matched to your existing conventions. |
 
-4. Proposes the concrete next step implied by the verdict (which file to edit, what to remove,
+5. Proposes the concrete next step implied by the verdict (which file to edit, what to remove,
    how to integrate) and **asks before making any change** — it never edits your project
    silently off the back of an opinion.
-5. Keeps a running decision log (`.tool-adoption-log.md`) in your project so past verdicts aren't
+6. Keeps a running decision log (`.tool-adoption-log.md`) in your project so past verdicts aren't
    forgotten or re-litigated every time a similar tool comes up.
 
 ## Worked example

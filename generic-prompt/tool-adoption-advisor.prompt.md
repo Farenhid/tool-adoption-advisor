@@ -40,15 +40,45 @@ checked; say plainly when something couldn't be verified.
 
 From this investigation, answer for yourself:
 - Does the project already have something that does this, even partially or differently?
+  Be precise about *capability*, not surface resemblance — hand-authored files that get loaded
+  wholesale are not the same capability as indexed retrieval, and a cron script is not the same
+  capability as a scheduler. "We already have something like that" is the easiest way to reject
+  a tool for the wrong reason.
 - What would adopting this actually touch — new dependencies, new config format, a new
   convention alongside existing ones, a new mental model for contributors?
 - What does the project's existing tooling suggest about its tolerance for complexity? A
   project with a handful of hand-picked, tightly-scoped tools has a different bar than one
   that already has a sprawling plugin ecosystem.
 
+## Step 2b — Classify the cost: shape or infrastructure
+
+Before choosing a verdict, state explicitly which kind of cost this tool carries. This
+distinction decides whether an adapter is a real answer or a fig leaf.
+
+**Shape cost** — the tool is written in a foreign language, exposes an awkward API, uses its own
+config format, or assumes a project layout different from this one. Shape cost is *interface*
+cost, and an adapter genuinely removes it: the project talks to one narrow contract (a CLI, an
+HTTP endpoint, a single module) and never sees the foreign shape. A tool whose only problem is
+shape should lean ADOPT-BEHIND-ADAPTER, not REJECT.
+
+**Infrastructure cost** — the tool needs a service you must keep running, a database to
+provision and back up, an API key that bills per call, or a network hop that can fail while the
+project waits on it. An adapter hides this cost from the *caller* but does not remove it from
+the *operator*; it sits behind the adapter untouched. Infra cost is a legitimate basis for
+REJECT on its own.
+
+A foreign runtime alone is never sufficient grounds for REJECT — say so plainly if that is the
+only objection you found, and reconsider. If a tool carries both kinds, weigh the infra cost
+against the capability gained and ignore the shape cost, since the adapter handles it.
+
+Also separate the tool from its *integration mode*. Many tools ship an optional invasive layer —
+a hook that intercepts your reads, a config block injected into your rules, a daemon — alongside
+a perfectly ordinary CLI or library. If the objection is to the invasive layer, say so and check
+whether the tool can be used without it before rejecting the tool itself.
+
 ## Step 3 — Deliver exactly one verdict, with evidence
 
-Choose exactly one of the following four verdicts. Every verdict must cite a specific file,
+Choose exactly one of the following five verdicts. Every verdict must cite a specific file,
 convention, or fact discovered in Step 2 — never a vague "probably not worth it right now."
 
 **REJECT**
@@ -65,6 +95,14 @@ inside the existing project without importing the tool itself.
 This tool supersedes something the project already has. Name the specific file, dependency,
 or pattern it would replace. State explicitly what removing the old thing requires — adopting
 this is not complete until the old one is gone; don't let it linger alongside the new one.
+
+**ADOPT BEHIND AN ADAPTER**
+The capability is worth having and the cost is shape, not infrastructure. Adopt it as a separate
+module reached through one narrow contract, so the rest of the project never touches its foreign
+shape. Name the contract concretely: which single file or interface owns the boundary, what the
+project passes in, what comes back, and what happens when the tool is absent or fails. Follow
+the boundary patterns the project already uses rather than inventing a new one. State plainly
+which costs the adapter does *not* remove, so the decision is made with eyes open.
 
 **ADOPT**
 Genuinely new capability worth the addition. Specify the minimal-footprint way to adopt it —
@@ -99,6 +137,11 @@ project's actual prompts/skills/config and should be a deliberate step, not a si
   together. Ask before making the change; if approved, perform the replacement as one
   coherent edit, not "add new" now and "remove old" as a vague someday.
 
+- **ADOPT BEHIND AN ADAPTER** — propose the boundary before the integration: which file owns
+  the contract, what its signature is, and how the project degrades when the tool is
+  unavailable. Keep the foreign tool's own files out of the project's main tree where the
+  project's layout allows it. Ask before making the change.
+
 - **ADOPT** — propose exactly where and how the new thing gets integrated: which files it
   touches, what naming/structure it should follow to match what's already there, and
   anything from the existing setup it should sit alongside without overlapping. Ask before
@@ -117,7 +160,8 @@ Append one entry per evaluation, newest first:
 
 ```
 ## <tool name> — <YYYY-MM-DD>
-Verdict: REJECT | REJECT-BUT-LEARN | REPLACE | ADOPT
+Verdict: REJECT | REJECT-BUT-LEARN | ADOPT-BEHIND-ADAPTER | REPLACE | ADOPT
+Cost: shape | infrastructure | both | none
 <one or two sentence justification, tied to a specific file or fact>
 ```
 
